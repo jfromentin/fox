@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Le jeu du renard</title>
+    <link href="style.css" rel="stylesheet" type="text/css">
+  </head>
+  <script>
+    var button1;
+    var canvas;
+    var console;
+    var output;
+    var fox_output;
+    var ctx;
+    var width;
+    var heght;
+    var hole_image;
+    var hole_dx;
+    var hole_dy;
+    var hole_width;
+    var hole_height;
+    var hole_spacing;
+    var hole_number;
+    var fox_dx;
+    var fox_dy;
+    var fox_height;
+    var fox_width;
+    var jour;
+    var fox_pos;
+    var fox_image;
+    var glasses_image;
+    var statut;
+    const jour_max=100;
+    var full;
+    var F;
+    var s_length;
+    var s_observations;
+    var f;
+    var pause;
+
+    // Drawing primitives
+    
+    function compute_hole_spacing(){
+	hole_spacing=(width-2*hole_dx-hole_number*hole_width)/(hole_number-1);
+    }
+
+    function draw_background(){
+	ctx.fillStyle="lightblue";
+	ctx.fillRect(0,0,width,height/2);
+	ctx.fillStyle="#6b9c58";
+	ctx.fillRect(0,height/2,width,height/2);
+    }
+
+    function draw_fox(){
+	ctx.drawImage(fox_image,fox_dx+fox_pos*(hole_spacing+hole_width),fox_dy,fox_width,fox_height);
+    }
+
+    function draw_glasses(idx){
+	ctx.drawImage(glasses_image,glasses_dx+idx*(hole_spacing+hole_width),glasses_dy,glasses_width,glasses_height);
+    }
+    
+    function draw_hole(idx){
+	ctx.drawImage(hole_image,hole_dx+idx*(hole_spacing+hole_width),hole_dy,hole_width,hole_height);
+    }
+
+    function draw_holes(){
+	for(let idx=0;idx<hole_number;++idx){
+	    draw_hole(idx);
+	}
+    }
+
+    function draw_current_day(){
+	ctx.font = '20px sans serif';
+	ctx.fillStyle="red";
+	ctx.fillText("Jour "+jour,10,20);
+    }
+    
+    function draw(){
+	draw_background();
+	draw_holes();
+	if(statut!="choice"){
+	    draw_current_day();
+	}
+    }
+    // Fox primitives
+    
+    function init_fox_position(){
+	fox_pos=Math.floor(Math.random()*(hole_number));
+    }
+
+    function move_fox(){
+	if(fox_pos==0) fox_pos=1;
+	else if(fox_pos==hole_number-1) fox_pos=hole_number-2;
+	else fox_pos+=(2*Math.floor(Math.random()*2)-1);
+    }
+    
+    // Event primitives
+    
+    function click_on_hole(id_hole){
+	if(statut=="ingame"){
+	    if(id_hole==fox_pos){
+		end_game();
+		return;
+	    }
+	    jour+=1;
+	    move_fox();
+	    draw();
+	}
+	else if(statut=="record"){
+	    s_observations[s_length]=id_hole;
+	    jour+=1;
+	    s_length+=1;
+	    if(jour>1){
+		button1.disabled=false;
+		button2.disabled=false;
+	    }
+	    show_observations();
+	    draw();
+	}
+    }
+    
+    function canvas_click_event(event){
+	var x=event.offsetX;
+	var y=event.offsetY;
+	if(y>=hole_dy && y<=hole_dy+hole_height){
+	    for(let idx=0;idx<hole_number;++idx){
+		let xleft=hole_dx+idx*(hole_spacing+hole_width);
+		let xright=xleft+hole_width;
+		if(x>=xleft && x<=xright){
+		    click_on_hole(idx);
+		    return;
+		}
+	    }
+	}
+    }
+
+    function click_button1(){
+	if(statut=="choice" || statut=="gagne"){
+	    init_game();
+	    statut="ingame";
+	    button1.innerHTML="Arreter";
+	    button2.hidden=true;
+	    draw();
+	}
+	else if(statut=="ingame"){
+	    button1.innerHTML="Jouer";
+	    button2.hidden=false;
+	    statut="choice";
+	    draw();
+	}
+	else if(statut=="record"){
+	    jour-=1;
+	    s_length-=1;
+	    if(jour==1){
+		button1.disabled=true;
+		button2.disabled=true;
+	    }
+	    show_observations();
+	    draw();
+	}
+	else if(statut=="escape" || statut=="endanimate"){
+	    compute_escape();
+	    jour=1;
+	    show_escape();
+	}
+	else if(statut=="animate"){
+	    pause=true;
+	    button1.innerHTML="Reprendre";
+	    statut="pause";
+	}
+	else if(statut=="pause"){
+	    pause=false;
+	    button1.innerHTML="Pause";
+	    statut="animate";
+	    show_escape();
+	}
+    }
+     
+    function click_button2(){
+	if(statut=="choice" || statut=="gagne" || statut=="escape"){
+	    statut="record";
+	
+	    button1.innerHTML="Revenir jour précédent";
+	    button1.disabled=true;
+	    button2.innerHTML="Arreter et tester";
+	    button2.disabled=true;
+	    init_record();
+	    show_observations();
+	    draw();
+	}
+	else if(statut=="record"){
+	    statut="teste";
+	    test_strategie();
+	}
+	else if(statut=="endanimate"){
+	    button1.innerHTML="Jouer";
+	    button2.innerHTML="Enregistrer une startégie";
+	    statut="choice";
+	    output.innerHTML="";
+	    draw();
+	}
+
+    }
+
+    // Strategie escape
+    
+    function compute_escape(){
+	f=new Array(s_length);
+	let p=F[0].values().next().value;
+	f[0]=p;
+	for(let i=1;i<s_length;++i){
+	    if(F[i].has(p+1)){
+		f[i]=p+1;
+		p=p+1;
+	    }
+	    else{
+		f[i]=p-1;
+		p=p-1;
+	    }
+	}
+    }
+
+    function next(E){
+	let res=new Set();
+	for(const x of E){
+	    if(x>0){
+		res.add(x-1);
+	    }
+	    if(x<hole_number-1){
+		res.add(x+1);
+	    }
+	}
+	return res;
+    }
+
+    function prev(E){
+	return next(E);
+    }
+
+    function forward(){
+	let flag=false;
+	for(let i=1;i<s_length;++i){
+	    let T=new Set([...F[i]].filter(k => next(F[i-1]).has(k)));
+	    if(T.size<F[i].size){
+		F[i]=T;
+		flag=true;
+	    }
+	}
+	return flag;
+    }
+
+    function backward(){
+	let flag=false;
+	for(let i=s_length-2;i>=0;--i){
+	    let T=new Set([...F[i]].filter(k =>prev(F[i+1]).has(k)));
+	    if(T.size<F[i].size){
+		F[i]=T;
+		flag=true;
+	    }
+	}
+	return flag;
+    }
+    
+    function comp(i){
+	res=new Set(full);
+	res.delete(i);
+	return res;
+    }
+
+    function test_strategie(){
+	F=new Array(s_length);
+	for(let i=0;i<s_length;++i){
+	    F[i]=comp(s_observations[i]);;
+	}
+	let flag=true;
+	while(flag){
+	    flag=false;
+	    flag=flag||forward();
+	    flag=flag||backward();
+	}
+	if(F[0].size==0){
+	    output.innerHTML+=".<br> Bravo, tu trouves Fox à tous les coups.";
+	    statut="choice";
+	    button1.innerHTML="Jouer";
+	    button2.innerHTML="Enregitrer une startégie";
+	    draw();
+	    
+	}
+	else{
+	    output.innerHTML+=".<br> Mince, Fox arrive à s'échapper.";
+	    statut="escape";
+	    button1.innerHTML="Montrer comment";
+	    button2.innerHTML="Réessayer";
+	    draw();
+	    
+	}
+    }
+
+    // Animation
+    
+    function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function show_escape(){
+	button1.innerHTML="Pause";
+	button2.hidden=true;
+	statut="animate";
+	pause=false;
+	draw();
+	for(let i=jour-1;i<s_length;++i){
+	    if(pause){
+		return;
+	    }
+	    draw();
+	    fox_pos=f[i];
+	    draw_glasses(s_observations[i]);
+	    draw_fox();
+	    jour+=1;
+	    await sleep(1000);
+	}
+	button1.hidden=false;
+	button1.innerHTML="Remontre";
+	button2.hidden=false;
+	button2.innerHTML="Merci !";
+	statut="endanimate";
+    }
+
+    // Record
+
+    function init_record(){
+	jour=1;
+	s_length=0;
+    }
+    
+    function show_observations(){
+	str="Observations =";
+	for(let i=0;i<s_length;++i){
+	    str=str+" "+(s_observations[i]+1);
+	}
+	output.innerHTML=str;
+    }
+
+    // Basic game
+    
+    function init_game(){
+	output.innerHTML="";
+	jour=1;
+	init_fox_position();
+	draw();
+    }
+
+    function end_game(){
+	draw_fox();
+	output.innerHTML="Félicititation, tu as trouvé Fox le jour "+jour;
+	button1.innerHTML="Rejouer";
+	button1.hidden=false;
+	button2.hidden=false;
+	statut="gagne";
+	//init_game();
+    }
+    
+
+    // Main init  
+  
+    function init(){
+	button1=document.getElementById("button1");
+	button2=document.getElementById("button2");
+	output=document.getElementById("output");
+	canvas=document.getElementById("canvas");
+	canvas.addEventListener("click",canvas_click_event,false);
+	width=canvas.width;
+	height=canvas.height;
+	ctx=canvas.getContext("2d");
+	hole_image=document.getElementById("hole");
+	hole_dx=50;
+	hole_dy=100;
+	hole_width=120;
+	hole_height=100;
+	hole_number=5;
+	fox_image=document.getElementById("fox");
+	fox_dx=55;
+	fox_dy=60;
+	fox_width=100;
+	fox_height=165;
+	glasses_image=document.getElementById("glasses");
+	glasses_width=100;
+	glasses_height=40;
+	glasses_dx=60;
+	glasses_dy=250;
+	s_observations=new Array(jour_max);
+	compute_hole_spacing();
+	full=new Set();
+	for(let i=0;i<hole_number;++i){
+	    full.add(i);
+	}
+	statut="choice";
+	draw();
+    }
+  </script>
+  <body onload="init()">
+    <h1>Cherche le renard</h1>
+
+    <canvas id="canvas" height="300" width="1000" style="border:1px solid black;"> 
+    </canvas>
+    <br>
+    
+    <button id="button1" onclick="click_button1()">Jouer</button>
+    <button id="button2" onclick="click_button2()">Enregistrer une stratégie</button>
+    <p id="output"></p>
+     <img class="hide" id="hole" src="images/hole.png">
+    <img class="hide" id="fox" src="images/fox.png">
+    <img class="hide" id="glasses" src="images/glasses.png">
+  </body>
+</html>
