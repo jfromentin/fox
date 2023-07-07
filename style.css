@@ -5,3 +5,32 @@ body{
 .hide{
     display:none;
 }
+
+.credit{
+    position:relative;
+    float:right;
+}
+
+.check-label{
+
+    display:block;
+    padding-left:0px;
+    padding-bottom:10px;
+    color:red;
+}
+
+.deplacements{
+    display:block;
+
+}
+.fox-icon{
+    display:block;
+    width:30px;
+    margin-left:126px;
+    margin-bottom:-20px;
+}
+
+input[type=checkbox]{
+    width:20px;
+
+}
