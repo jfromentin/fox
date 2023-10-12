@@ -168,12 +168,12 @@
 	  if(statut=="choice" || statut=="gagne"){
 	      init_game();
 	      statut="ingame";
-	      button1.innerHTML="Arreter";
+	      button1.innerHTML="Arrêter de jouer";
 	      button2.hidden=true;
 	      draw();
 	  }
 	  else if(statut=="ingame"){
-	      button1.innerHTML="Jouer";
+	      button1.innerHTML="Jouer avec un d&eacute;placement al&eacute;atoire de Fox";
 	      button2.hidden=false;
 	      statut="choice";
 	      draw();
@@ -212,7 +212,7 @@
 	      
 	      button1.innerHTML="Revenir jour précédent";
 	      button1.disabled=true;
-	      button2.innerHTML="Arreter et tester";
+	      button2.innerHTML="Arrêter l'enregistrement de la stratégie et tester";
 	      button2.disabled=true;
 	      init_record();
 	      show_observations();
@@ -223,8 +223,8 @@
 	      test_strategie();
 	  }
 	  else if(statut=="endanimate"){
-	      button1.innerHTML="Jouer";
-	      button2.innerHTML="Enregistrer une startégie";
+	      button1.innerHTML="Jouer avec un d&eacute;placement al&eacute;atoire de Fox";
+	      button2.innerHTML="Enregistrer une srtat&eacute;gie d'observation pour essayer de d&eacute;busquer Fox";
 	      statut="choice";
 	      output.innerHTML="";
 	      draw();
@@ -245,6 +245,7 @@
       function click_button_apply(){
 	  obs_number=parseInt(obs_input.value);
 	  hole_number=parseInt(hole_input.value);
+		 
 	  init();
       }
      
@@ -358,15 +359,15 @@
 	if(F[0].size==0){
 	    output.innerHTML+=".<br> Bravo, tu trouves Fox à tous les coups.";
 	    statut="choice";
-	    button1.innerHTML="Jouer";
-	    button2.innerHTML="Enregitrer une startégie";
+	    button1.innerHTML="Jouer avec un d&eacute;placement al&eacute;atoire de Fox";
+	    button2.innerHTML="Enregitrer une startégie d'observation pour essayer de d&eacute;busquer Fox";
 	    draw();
 	    
 	}
 	  else{
 	      output.innerHTML+=".<br> Mince, Fox arrive à s'échapper.";
 	      statut="escape";
-	      button1.innerHTML="Montrer comment";
+	      button1.innerHTML="Montrer comment il y arrive";
 	      button2.innerHTML="Réessayer";
 	      draw();
 	    
@@ -487,8 +488,45 @@
 	s_observations=new Array(jour_max);
 	compute_hole_spacing();
 	dep=new Set();
-	read_dep();
-	console.log(dep);
+        read_dep();
+
+        valid_hole=new Set();
+        for(let x=0;x<hole_number;++x){
+             for(const d of dep){
+	         if(x+d>=0 && x+d<=hole_number-1){
+		     valid_hole.add(x);
+	          }
+
+		}
+	}
+				   console.log("valid holes");
+				   console.log(valid_hole);
+				   if(valid_hole.size<hole_number){
+						       nb_forbidden = hole_number-valid_hole.size;
+						       if(nb_forbidden == 1){
+						       msg="Le terrier ";
+						       }
+						       else{
+						       msg="Les terriers ";
+						       }
+						       temp=1;
+						       for(let x=0;x<hole_number;++x){
+								      if(!valid_hole.has(x)){
+								      if(temp > 1 && temp<nb_forbidden) msg=msg+", ";
+								      if(nb_forbidden > 1 && temp == nb_forbidden ) msg=msg+" et ";
+								      msg=msg+(x+1);
+								      temp=temp+1;
+								      }
+								      }
+						       if(nb_forbidden == 1){
+						       msg=msg+" ne peut pas être point de départ de Fox.";
+						       }
+						       else{
+						       msg=msg+" ne peuvent pas être point de départ de Fox.";
+						       }
+								      alert(msg);
+						       }
+						       console.log(dep);					      
 	full=new Set();
 	for(let i=0;i<hole_number;++i){
 	    full.add(i);
@@ -501,14 +539,9 @@
   <body onload="init()">
     <h1>Cherche le renard</h1>
 
-    <canvas id="canvas" height="300" width="1000" style="border:1px solid black;"> 
-    </canvas>
-
-    <br>
     
-    <button id="button1" onclick="click_button1()">Jouer</button>
-    <button id="button2" onclick="click_button2()">Enregistrer une stratégie</button>
-    <p id="output"></p>
+
+ 
     <img class="hide" id="hole" src="hole.png" alt="hole">
     <img class="hide" id="fox" src="fox.png" alt="fox">
     <img class="hide" id="glasses" src="glasses.png" alt="glasses">
@@ -521,6 +554,7 @@
 	<option>2</option>
 	<option>3</option>
       </select>
+      <br>
       <br>
       <label>Nombre de terriers : </label>
       <select id="hole-select">
@@ -537,9 +571,9 @@
 	<option>13</option>
       </select>
       <br>
-      
+      <br>
       <label>Deplacements : </label>
-      <div class="deplacements">
+      <div class="d&eacute;placements">
 	<img src="fox-icon.png" class="fox-icon" alt="Fox icon"></img>
 	<br>
 	<input id="dep0" type="checkbox" value="-4">
@@ -553,9 +587,28 @@
 	<input id="dep8" type="checkbox" value="4">
       </div>
     </form>
+
     <br>
-      <button onclick="click_button_apply()">Appliquer</button>
-      
+
+    
+    <button onclick="click_button_apply()">Appliquer les modifications</button>
+
+    <br>
+    <br>
+    <canvas id="canvas" height="300" width="1000" style="border:1px solid black;"> 
+    </canvas>
+
+
+
+    <br>
+    <p id="output"></p>
+    
+
+      <button id="button1" onclick="click_button1()">Jouer avec un d&eacute;placement al&eacute;atoire de Fox</button> 
+      <br>
+      <br>
+      <button id="button2" onclick="click_button2()">Enregistrer une stratégie d'observation pour essayer de d&eacute;busquer Fox</button> 
+	  
       <br>
       <br>
     <div class="credit"><a href="http://www.freepik.com">Images are designed by Freepik</a></div>
